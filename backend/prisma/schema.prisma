@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Cattle {
+  id                  String       @id
+  cowTag              String
+  name                String
+  breed               String
+  age                 Int
+  color               String
+  weight              Float
+  owner               String
+  farm                String
+  lastTemperature     Float
+  healthStatus        String
+  healthScore         Int
+  biometricConfidence Float
+  lastScanTime        String
+  deviceId            String
+  muzzleImage         String
+  createdAt           DateTime     @default(now())
+
+  scanRecords         ScanRecord[]
+}
+
+model ScanRecord {
+  id                  String   @id @default(uuid())
+  cattleId            String
+  deviceId            String
+  temperature         Float
+  healthStatus        String
+  biometricConfidence Float
+  muzzleImage         String
+  note                String?
+  createdAt           DateTime @default(now())
+
+  cattle              Cattle   @relation(fields: [cattleId], references: [id], onDelete: Cascade)
+}
