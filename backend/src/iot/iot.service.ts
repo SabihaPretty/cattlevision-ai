@@ -3,18 +3,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Request } from 'express';
+import type { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class IotService {
   constructor(private prisma: PrismaService) {}
 
-  async saveReading(
-    body: any,
-    file: Express.Multer.File,
-    request: Request,
-  ) {
+  async saveReading(body: any, file: any, request: Request) {
     const cattleId = body.cattleId;
     const deviceId = body.deviceId;
     const temperature = Number(body.temperature);

@@ -33,7 +33,7 @@ export class IotController {
   )
   async receiveReading(
     @Body() body: any,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: any,
     @Req() request: Request,
   ) {
     return this.iotService.saveReading(body, file, request);
