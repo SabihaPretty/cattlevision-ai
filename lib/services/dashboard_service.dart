@@ -23,7 +23,7 @@ class DashboardService {
     final total = cattleList.length;
 
     final healthy = cattleList
-        .where((c) => c.healthStatus == 'Healthy')
+        .where((c) => c.healthStatus.toLowerCase() == 'healthy')
         .length;
 
     final fever = cattleList
