@@ -1,23 +1,26 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app =
-    await NestFactory.create<NestExpressApplication>(
-      AppModule,
-    );
+  const uploadsPath = join(process.cwd(), 'uploads');
 
-  app.enableCors();
+  if (!existsSync(uploadsPath)) {
+    mkdirSync(uploadsPath);
+  }
 
-  app.useStaticAssets(
-    join(__dirname, '..', 'uploads'),
-    {
-      prefix: '/uploads/',
-    },
-  );
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  app.enableCors({
+    origin: '*',
+  });
+
+  app.useStaticAssets(uploadsPath, {
+    prefix: '/uploads/',
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -27,14 +30,14 @@ async function bootstrap() {
     }),
   );
 
-  // IMPORTANT FOR RENDER
-  const port = process.env.PORT || 5000;
+  const port = Number(process.env.PORT) || 5000;
 
-  await app.listen(port as number);
+  await app.listen(port, '0.0.0.0');
 
   console.log('===================================');
   console.log('CattleVision AI Backend Running');
-  console.log(`Backend URL Running On Port: ${port}`);
+  console.log(`Port: ${port}`);
+  console.log('Host: 0.0.0.0');
   console.log('===================================');
 }
 

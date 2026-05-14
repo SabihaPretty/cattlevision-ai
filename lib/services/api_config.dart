@@ -1,3 +1,6 @@
 class ApiConfig {
-  static const String baseUrl = 'http://192.168.0.126:5000';
+  static const String baseUrl =
+      'https://cattlevision-ai-backend.onrender.com';
+
+  static const Duration timeout = Duration(seconds: 90);
 }
