@@ -5,15 +5,19 @@ import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app =
+    await NestFactory.create<NestExpressApplication>(
+      AppModule,
+    );
 
-  app.enableCors({
-    origin: '*',
-  });
+  app.enableCors();
 
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads/',
-  });
+  app.useStaticAssets(
+    join(__dirname, '..', 'uploads'),
+    {
+      prefix: '/uploads/',
+    },
+  );
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -23,14 +27,14 @@ async function bootstrap() {
     }),
   );
 
+  // IMPORTANT FOR RENDER
   const port = process.env.PORT || 5000;
 
-  await app.listen(port);
+  await app.listen(port as number);
 
   console.log('===================================');
   console.log('CattleVision AI Backend Running');
-  console.log(`Backend URL: http://localhost:${port}`);
-  console.log(`Uploads URL: http://localhost:${port}/uploads`);
+  console.log(`Backend URL Running On Port: ${port}`);
   console.log('===================================');
 }
 
