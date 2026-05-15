@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
+
 import '../models/cattle_model.dart';
+import '../models/scan_model.dart';
 import '../services/cattle_api_service.dart';
+import '../services/scan_api_service.dart';
 import 'edit_cattle_screen.dart';
 
-class CattleDetailsScreen extends StatelessWidget {
+class CattleDetailsScreen extends StatefulWidget {
   final CattleModel cattle;
 
   const CattleDetailsScreen({
@@ -12,13 +15,34 @@ class CattleDetailsScreen extends StatelessWidget {
     required this.cattle,
   });
 
+  @override
+  State<CattleDetailsScreen> createState() => _CattleDetailsScreenState();
+}
+
+class _CattleDetailsScreenState extends State<CattleDetailsScreen> {
+  late Future<List<ScanModel>> scanHistoryFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    scanHistoryFuture =
+        ScanApiService.getCattleScanHistory(widget.cattle.id);
+  }
+
+  Future<void> refreshScanHistory() async {
+    setState(() {
+      scanHistoryFuture =
+          ScanApiService.getCattleScanHistory(widget.cattle.id);
+    });
+  }
+
   Future<void> deleteCattle(BuildContext context) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: const Text('Delete Cattle?'),
-          content: Text('Are you sure you want to delete ${cattle.id}?'),
+          content: Text('Are you sure you want to delete ${widget.cattle.id}?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -39,7 +63,7 @@ class CattleDetailsScreen extends StatelessWidget {
     if (confirm != true) return;
 
     try {
-      await CattleApiService.deleteCattle(cattle.id);
+      await CattleApiService.deleteCattle(widget.cattle.id);
 
       if (!context.mounted) return;
 
@@ -67,7 +91,7 @@ class CattleDetailsScreen extends StatelessWidget {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => EditCattleScreen(cattle: cattle),
+        builder: (_) => EditCattleScreen(cattle: widget.cattle),
       ),
     );
 
@@ -78,12 +102,17 @@ class CattleDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cattle = widget.cattle;
     final bool isHealthy = cattle.healthStatus == 'Healthy';
 
     return Scaffold(
       appBar: AppBar(
         title: Text(cattle.id),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: refreshScanHistory,
+          ),
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () => openEditScreen(context),
@@ -210,47 +239,109 @@ class CattleDetailsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 28),
           _sectionTitle('Checkup History'),
-          if (cattle.history.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF111C2E),
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: const Text(
-                'No scan history found yet. Scan records will be connected later.',
-                style: TextStyle(color: Colors.white70),
-              ),
-            )
-          else
-            ...cattle.history.map(
-              (scan) => Container(
-                margin: const EdgeInsets.only(bottom: 14),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF111C2E),
-                  borderRadius: BorderRadius.circular(22),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      scan.date,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 17,
-                      ),
+          FutureBuilder<List<ScanModel>>(
+            future: scanHistoryFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF111C2E),
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.cyanAccent,
                     ),
-                    const SizedBox(height: 8),
-                    Text('Temperature: ${scan.temperature}°C'),
-                    Text('Health: ${scan.healthStatus}'),
-                    Text('Device: ${scan.deviceId}'),
-                    Text('Officer: ${scan.officer}'),
-                    Text('Note: ${scan.note}'),
-                  ],
+                  ),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: Colors.redAccent),
+                  ),
+                  child: Text(
+                    snapshot.error.toString(),
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                );
+              }
+
+              final scans = snapshot.data ?? [];
+
+              if (scans.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF111C2E),
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: const Text(
+                    'No scan history found yet. New scan records from IoT or scan API will appear here.',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                );
+              }
+
+              return Column(
+                children: scans.map(_scanHistoryCard).toList(),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _scanHistoryCard(ScanModel scan) {
+    final bool fever =
+        scan.healthStatus.toLowerCase().contains('fever') ||
+            scan.temperature >= 39;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF111C2E),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: fever
+              ? Colors.orangeAccent.withOpacity(0.7)
+              : Colors.greenAccent.withOpacity(0.5),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                fever ? Icons.warning_amber : Icons.check_circle,
+                color: fever ? Colors.orangeAccent : Colors.greenAccent,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  scan.healthStatus,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 17,
+                  ),
                 ),
               ),
-            ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text('Scan Time: ${scan.lastScanTime}'),
+          Text('Temperature: ${scan.temperature}°C'),
+          Text('Device: ${scan.deviceId}'),
+          Text('Biometric Confidence: ${scan.biometricConfidence}%'),
         ],
       ),
     );

@@ -11,23 +11,23 @@ class AddCattleScreen extends StatefulWidget {
 class _AddCattleScreenState extends State<AddCattleScreen> {
   final formKey = GlobalKey<FormState>();
 
-  final idController = TextEditingController(text: 'COW-2026-002');
-  final tagController = TextEditingController(text: 'TAG-002');
-  final nameController = TextEditingController(text: 'Rani');
-  final breedController = TextEditingController(text: 'Friesian');
-  final ageController = TextEditingController(text: '4');
-  final colorController = TextEditingController(text: 'Black & White');
-  final weightController = TextEditingController(text: '320');
-  final ownerController = TextEditingController(text: 'Farmer B');
+  final idController = TextEditingController(text: 'COW-2026-004');
+  final tagController = TextEditingController(text: 'TAG-004');
+  final nameController = TextEditingController(text: 'New Cattle');
+  final breedController = TextEditingController(text: 'Local');
+  final ageController = TextEditingController(text: '3');
+  final colorController = TextEditingController(text: 'Brown');
+  final weightController = TextEditingController(text: '280');
+  final ownerController = TextEditingController(text: 'Farmer D');
   final farmController = TextEditingController(text: 'Smart Agro Farm');
-  final tempController = TextEditingController(text: '38.6');
+  final tempController = TextEditingController(text: '38.5');
   final healthStatusController = TextEditingController(text: 'Healthy');
   final healthScoreController = TextEditingController(text: '90');
-  final confidenceController = TextEditingController(text: '93.5');
-  final scanTimeController = TextEditingController(text: 'Today, 11:20 AM');
-  final deviceIdController = TextEditingController(text: 'ESP32-CAM-02');
+  final confidenceController = TextEditingController(text: '94');
+  final scanTimeController = TextEditingController(text: 'Today');
+  final deviceIdController = TextEditingController(text: 'PHONE-SCAN-01');
   final imageController = TextEditingController(
-    text: 'https://images.unsplash.com/photo-1527153857715-3908f2bae5e8',
+    text: 'https://images.unsplash.com/photo-1500595046743-cd271d694d30',
   );
 
   bool isLoading = false;
@@ -56,7 +56,9 @@ class _AddCattleScreenState extends State<AddCattleScreen> {
   Future<void> submitCattle() async {
     if (!formKey.currentState!.validate()) return;
 
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+    });
 
     final data = {
       'id': idController.text.trim(),
@@ -101,7 +103,9 @@ class _AddCattleScreenState extends State<AddCattleScreen> {
       );
     } finally {
       if (mounted) {
-        setState(() => isLoading = false);
+        setState(() {
+          isLoading = false;
+        });
       }
     }
   }
@@ -133,6 +137,7 @@ class _AddCattleScreenState extends State<AddCattleScreen> {
     required IconData icon,
     TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
+    int maxLines = 1,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
@@ -140,10 +145,44 @@ class _AddCattleScreenState extends State<AddCattleScreen> {
         controller: controller,
         keyboardType: keyboardType,
         validator: validator ?? requiredValidator,
+        maxLines: maxLines,
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon),
         ),
+      ),
+    );
+  }
+
+  Widget imagePreview() {
+    final imageUrl = imageController.text.trim();
+
+    if (imageUrl.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Image.network(
+        imageUrl,
+        height: 190,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            height: 150,
+            decoration: BoxDecoration(
+              color: Colors.white12,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Center(
+              child: Text(
+                'Image preview not available. Please check URL.',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -179,18 +218,20 @@ class _AddCattleScreenState extends State<AddCattleScreen> {
                   SizedBox(height: 12),
                   Text(
                     'Register Cattle Profile',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   SizedBox(height: 6),
                   Text(
-                    'This data will be saved directly to PostgreSQL database through NestJS backend.',
+                    'Use a stable image URL for cattle profile. Real phone or ESP32 images should be added from the Smart Scan page.',
                     style: TextStyle(color: Colors.white70, height: 1.5),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 22),
-
             inputField(
               controller: idController,
               label: 'Cattle ID',
@@ -276,14 +317,23 @@ class _AddCattleScreenState extends State<AddCattleScreen> {
               label: 'Device ID',
               icon: Icons.memory,
             ),
-            inputField(
+            TextFormField(
               controller: imageController,
-              label: 'Muzzle Image URL',
-              icon: Icons.image,
+              validator: requiredValidator,
+              maxLines: 2,
+              onChanged: (_) {
+                setState(() {});
+              },
+              decoration: const InputDecoration(
+                labelText: 'Muzzle Image URL',
+                prefixIcon: Icon(Icons.image),
+                helperText:
+                    'For real phone/ESP32 images, use the Smart Scan page.',
+              ),
             ),
-
-            const SizedBox(height: 12),
-
+            const SizedBox(height: 14),
+            imagePreview(),
+            const SizedBox(height: 24),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 minimumSize: const Size(double.infinity, 58),

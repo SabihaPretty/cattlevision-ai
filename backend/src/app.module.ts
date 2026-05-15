@@ -10,6 +10,7 @@ import { AlertsModule } from './alerts/alerts.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { TeamModule } from './team/team.module';
 import { IotModule } from './iot/iot.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { IotModule } from './iot/iot.module';
     AnalyticsModule,
     TeamModule,
     IotModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [],
