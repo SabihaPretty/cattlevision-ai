@@ -4,12 +4,27 @@ import 'login_screen.dart';
 class IntroScreen extends StatelessWidget {
   const IntroScreen({super.key});
 
+  void goToLogin(BuildContext context) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const LoginScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
       body: Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(24),
+        height: double.infinity,
+        padding: EdgeInsets.symmetric(
+          horizontal: size.width < 420 ? 34 : 44,
+          vertical: 34,
+        ),
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             colors: [
@@ -17,85 +32,144 @@ class IntroScreen extends StatelessWidget {
               Color(0xFF123B7A),
               Color(0xFF075985),
             ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Spacer(),
+              const Spacer(flex: 2),
+
               Container(
-                padding: const EdgeInsets.all(18),
+                width: 120,
+                height: 120,
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(26),
-                  border: Border.all(color: Colors.white24),
+                  borderRadius: BorderRadius.circular(34),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.18),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.18),
+                      blurRadius: 22,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
                 ),
                 child: const Icon(
                   Icons.pets,
-                  size: 54,
                   color: Colors.cyanAccent,
+                  size: 68,
                 ),
               ),
-              const SizedBox(height: 28),
+
+              const SizedBox(height: 46),
+
               const Text(
                 'CattleVision AI',
                 style: TextStyle(
                   fontSize: 42,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  letterSpacing: -1.2,
                 ),
               ),
+
               const SizedBox(height: 12),
+
               const Text(
                 'AI Biometric Cattle Monitoring System',
-                style: TextStyle(fontSize: 18, color: Colors.white70),
+                style: TextStyle(
+                  fontSize: 18,
+                  color: Colors.white70,
+                  height: 1.4,
+                ),
               ),
-              const SizedBox(height: 30),
-              _feature('Muzzle biometric identification'),
-              _feature('Body temperature tracking'),
-              _feature('Smart health alerts'),
-              _feature('ESP32-CAM device sync'),
-              _feature('Professional farm dashboard'),
-              const Spacer(),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 58),
-                  backgroundColor: Colors.cyanAccent,
-                  foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+
+              const SizedBox(height: 40),
+
+              const _FeatureRow(text: 'Muzzle biometric identification'),
+              const SizedBox(height: 18),
+              const _FeatureRow(text: 'Body temperature tracking'),
+              const SizedBox(height: 18),
+              const _FeatureRow(text: 'Smart health alerts'),
+              const SizedBox(height: 18),
+              const _FeatureRow(text: 'ESP32-CAM device sync'),
+              const SizedBox(height: 18),
+              const _FeatureRow(text: 'Professional farm dashboard'),
+
+              const Spacer(flex: 3),
+
+              SizedBox(
+                width: double.infinity,
+                height: 62,
+                child: ElevatedButton(
+                  onPressed: () => goToLogin(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.cyanAccent,
+                    foregroundColor: Colors.black,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(22),
+                    ),
+                  ),
+                  child: const Text(
+                    'Get Started',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  );
-                },
-                child: const Text(
-                  'Get Started',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                ),
               ),
+
+              const SizedBox(height: 12),
             ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _feature(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: Row(
-        children: [
-          const Icon(Icons.check_circle, color: Colors.greenAccent),
-          const SizedBox(width: 12),
-          Text(text, style: const TextStyle(fontSize: 16)),
-        ],
-      ),
+class _FeatureRow extends StatelessWidget {
+  final String text;
+
+  const _FeatureRow({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 30,
+          height: 30,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Color(0xFF63F3A7),
+          ),
+          child: const Icon(
+            Icons.check,
+            color: Color(0xFF075985),
+            size: 22,
+          ),
+        ),
+        const SizedBox(width: 18),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              fontSize: 18,
+              color: Colors.white70,
+              height: 1.35,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

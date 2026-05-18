@@ -1,46 +1,33 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  Req,
-  UploadedFile,
-  UseInterceptors,
-} from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
-import type { Request } from 'express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-import { IotService } from './iot.service';
+import { Controller, Post, Body, Get } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('iot')
 export class IotController {
-  constructor(private readonly iotService: IotService) {}
+  constructor(private prisma: PrismaService) {}
 
   @Post('reading')
-  @UseInterceptors(
-    FileInterceptor('image', {
-      storage: diskStorage({
-        destination: './uploads',
-        filename: (req, file, cb) => {
-          const uniqueName =
-            Date.now() + '-' + Math.round(Math.random() * 1000000000);
-
-          cb(null, uniqueName + extname(file.originalname));
-        },
-      }),
-    }),
-  )
-  async receiveReading(
-    @Body() body: any,
-    @UploadedFile() file: any,
-    @Req() request: Request,
-  ) {
-    return this.iotService.saveReading(body, file, request);
+  async postReading(@Body() body: any) {
+    const { deviceId, temperature, ambient, note, muzzleImage } = body;
+    const record = await this.prisma.scanRecord.create({
+      data: {
+        cattleId: body.cattleId ?? 'demo-cattle',
+        deviceId,
+        temperature,
+        healthStatus: 'ok',
+        biometricConfidence: 100,
+        muzzleImage: muzzleImage ?? '',
+        note: note ?? '',
+      },
+    });
+    return { success: true, data: record };
   }
 
   @Get('latest')
-  async getLatestReading() {
-    return this.iotService.getLatestReading();
+  async getLatest() {
+    const latest = await this.prisma.scanRecord.findMany({
+      take: 1,
+      orderBy: { createdAt: 'desc' },
+    });
+    return { success: true, data: latest };
   }
 }

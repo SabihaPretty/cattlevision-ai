@@ -17,19 +17,22 @@ class _ScanScreenState extends State<ScanScreen> {
   late Future<List<ScanModel>> scansFuture;
   late Future<List<CattleModel>> cattleFuture;
 
-  final imagePicker = ImagePicker();
+  final ImagePicker imagePicker = ImagePicker();
 
   String? selectedCattleId;
   XFile? selectedImage;
 
-  final temperatureController = TextEditingController();
-  final deviceController = TextEditingController(text: 'PHONE-SCAN-01');
+  final TextEditingController temperatureController = TextEditingController();
+  final TextEditingController deviceController =
+      TextEditingController(text: 'PHONE-SCAN-01');
 
   bool isSending = false;
 
   @override
   void initState() {
     super.initState();
+
+    // Page open hole sudhu ekbar data load hobe.
     scansFuture = ScanApiService.getRecentScans();
     cattleFuture = CattleApiService.getCattleList();
   }
@@ -49,11 +52,13 @@ class _ScanScreenState extends State<ScanScreen> {
   }
 
   Color statusColor(String status) {
-    if (status.toLowerCase().contains('fever')) {
-      return Colors.redAccent;
-    }
+    final value = status.toLowerCase();
 
-    if (status.toLowerCase().contains('healthy')) {
+    if (value.contains('fever')) return Colors.redAccent;
+
+    if (value.contains('healthy') ||
+        value.contains('good') ||
+        value.contains('ok')) {
       return Colors.greenAccent;
     }
 
@@ -92,16 +97,9 @@ class _ScanScreenState extends State<ScanScreen> {
       return;
     }
 
-    final temperature = double.tryParse(
-      temperatureController.text.trim(),
-    );
+    final temperature = double.tryParse(temperatureController.text.trim());
 
-    if (temperature == null) {
-      showError('Please enter a valid temperature');
-      return;
-    }
-
-    if (temperature < 30 || temperature > 45) {
+    if (temperature == null || temperature < 30 || temperature > 45) {
       showError('Temperature should be between 30°C and 45°C');
       return;
     }
@@ -170,6 +168,7 @@ class _ScanScreenState extends State<ScanScreen> {
           IconButton(
             onPressed: refreshScans,
             icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh Scan History',
           ),
         ],
       ),
@@ -214,9 +213,7 @@ class _ScanScreenState extends State<ScanScreen> {
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: Colors.cyanAccent.withOpacity(0.35),
-        ),
+        border: Border.all(color: Colors.cyanAccent.withOpacity(0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,11 +231,10 @@ class _ScanScreenState extends State<ScanScreen> {
             style: TextStyle(color: Colors.white70),
           ),
           const SizedBox(height: 18),
+
           FutureBuilder<List<CattleModel>>(
             future: cattleFuture,
             builder: (context, snapshot) {
-              final cattleList = snapshot.data ?? [];
-
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const LinearProgressIndicator(
                   color: Colors.cyanAccent,
@@ -246,12 +242,21 @@ class _ScanScreenState extends State<ScanScreen> {
               }
 
               if (snapshot.hasError) {
-                return Text(
-                  'Failed to load cattle: ${snapshot.error}',
-                  style: const TextStyle(color: Colors.redAccent),
+                return Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.redAccent),
+                  ),
+                  child: Text(
+                    'Failed to load cattle list\n${snapshot.error}',
+                    style: const TextStyle(color: Colors.white70),
+                  ),
                 );
               }
 
+              final cattleList = snapshot.data ?? <CattleModel>[];
               final validSelectedId = cattleList.any(
                 (cattle) => cattle.id == selectedCattleId,
               )
@@ -278,19 +283,20 @@ class _ScanScreenState extends State<ScanScreen> {
               );
             },
           ),
+
           const SizedBox(height: 14),
+
           TextField(
             controller: temperatureController,
-            keyboardType: const TextInputType.numberWithOptions(
-              decimal: true,
-            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
               labelText: 'Temperature °C',
               prefixIcon: Icon(Icons.thermostat),
-              hintText: 'Example: 38.7',
             ),
           ),
+
           const SizedBox(height: 14),
+
           TextField(
             controller: deviceController,
             decoration: const InputDecoration(
@@ -298,31 +304,9 @@ class _ScanScreenState extends State<ScanScreen> {
               prefixIcon: Icon(Icons.memory),
             ),
           ),
+
           const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white24),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.image, color: Colors.cyanAccent),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    selectedImage == null
-                        ? 'No image selected'
-                        : selectedImage!.name,
-                    style: const TextStyle(color: Colors.white70),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
+
           Row(
             children: [
               Expanded(
@@ -342,7 +326,9 @@ class _ScanScreenState extends State<ScanScreen> {
               ),
             ],
           ),
+
           const SizedBox(height: 16),
+
           ElevatedButton.icon(
             onPressed: isSending ? null : sendPhoneScan,
             style: ElevatedButton.styleFrom(
@@ -385,9 +371,7 @@ class _ScanScreenState extends State<ScanScreen> {
               borderRadius: BorderRadius.circular(22),
             ),
             child: const Center(
-              child: CircularProgressIndicator(
-                color: Colors.cyanAccent,
-              ),
+              child: CircularProgressIndicator(color: Colors.cyanAccent),
             ),
           );
         }
@@ -408,7 +392,7 @@ class _ScanScreenState extends State<ScanScreen> {
           );
         }
 
-        final scans = snapshot.data ?? [];
+        final scans = snapshot.data ?? <ScanModel>[];
 
         if (scans.isEmpty) {
           return Container(
