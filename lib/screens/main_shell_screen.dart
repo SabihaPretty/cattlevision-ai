@@ -1,18 +1,19 @@
-// lib/screens/main_shell_screen.dart
 import 'package:flutter/material.dart';
+
 import '../models/auth_user_model.dart';
-import 'login_screen.dart';
-import 'dashboard_screen.dart';
-import 'cattle_list_screen.dart';
-import 'scan_screen.dart';
-import 'alerts_screen.dart';
-import 'project_info_screen.dart';
-import 'change_password_screen.dart';
 import '../services/auth_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'admin_user_approval_screen.dart';
+import 'alerts_screen.dart';
+import 'cattle_list_screen.dart';
+import 'change_password_screen.dart';
+import 'dashboard_screen.dart';
+import 'login_screen.dart';
+import 'project_info_screen.dart';
+import 'scan_screen.dart';
 
 class MainShellScreen extends StatefulWidget {
   final AuthUserModel user;
+
   const MainShellScreen({super.key, required this.user});
 
   @override
@@ -20,11 +21,19 @@ class MainShellScreen extends StatefulWidget {
 }
 
 class _MainShellScreenState extends State<MainShellScreen> {
+  late AuthUserModel _user;
   int selectedIndex = 0;
 
-  // ✅ Pages with type-safe cast
+  @override
+  void initState() {
+    super.initState();
+    _user = widget.user;
+  }
+
+  bool get _isAdmin => _user.role.toLowerCase() == 'admin';
+
   List<Widget> get pages {
-    final List<Widget> basePages = [
+    final basePages = <Widget>[
       DashboardScreen(),
       CattleListScreen(),
       ScanScreen(),
@@ -32,14 +41,14 @@ class _MainShellScreenState extends State<MainShellScreen> {
       ProjectInfoScreen(),
     ];
 
-    if (widget.user.role == 'farmer') return basePages.sublist(0, 3).cast<Widget>();
-    if (widget.user.role == 'field_officer') return basePages.sublist(0, 4).cast<Widget>();
-    return basePages.cast<Widget>();
+    if (_user.role == 'farmer') return basePages.sublist(0, 3);
+    if (_user.role == 'field_officer') return basePages.sublist(0, 4);
+
+    return basePages;
   }
 
-  // ✅ Bottom navigation destinations with type-safe cast
   List<NavigationDestination> get destinations {
-    final baseDestinations = const [
+    const baseDestinations = <NavigationDestination>[
       NavigationDestination(
         icon: Icon(Icons.dashboard_outlined),
         selectedIcon: Icon(Icons.dashboard),
@@ -67,17 +76,17 @@ class _MainShellScreenState extends State<MainShellScreen> {
       ),
     ];
 
-    if (widget.user.role == 'farmer') return baseDestinations.sublist(0, 3).cast<NavigationDestination>();
-    if (widget.user.role == 'field_officer') return baseDestinations.sublist(0, 4).cast<NavigationDestination>();
-    return baseDestinations.cast<NavigationDestination>();
+    if (_user.role == 'farmer') return baseDestinations.sublist(0, 3);
+    if (_user.role == 'field_officer') return baseDestinations.sublist(0, 4);
+
+    return baseDestinations;
   }
 
-  /// ✅ Real logout function
-  void logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(AuthService.userKey);
+  Future<void> _logout() async {
+    await AuthService.logout();
 
     if (!mounted) return;
+
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -85,28 +94,142 @@ class _MainShellScreenState extends State<MainShellScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Future<void> _refreshApprovalStatus() async {
+    try {
+      final users = await AuthService.getUsers();
+      AuthUserModel? refreshedUser;
+
+      for (final user in users) {
+        if (user.id == _user.id) {
+          refreshedUser = user;
+          break;
+        }
+      }
+
+      if (refreshedUser == null) {
+        throw Exception('Account was not found.');
+      }
+
+      await AuthService.saveUser(refreshedUser);
+
+      if (!mounted) return;
+
+      setState(() {
+        _user = refreshedUser!;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _user.approved
+                ? 'Your account has been approved. Welcome!'
+                : 'Your account is still waiting for admin approval.',
+          ),
+          backgroundColor: _user.approved ? Colors.green : Colors.orange,
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not refresh status: $error'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  Widget _pendingApprovalPage() {
     return Scaffold(
       appBar: AppBar(
-        title: Text('CattleVision AI - ${widget.user.role.toUpperCase()}'),
+        title: const Text('Account Pending Approval'),
         actions: [
           IconButton(
+            onPressed: _logout,
             icon: const Icon(Icons.logout),
-            onPressed: logout,
             tooltip: 'Logout',
           ),
+        ],
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.hourglass_top_rounded,
+                color: Colors.cyanAccent,
+                size: 80,
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Waiting for Admin Approval',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 25,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Your ${_user.role.replaceAll('_', ' ')} account has been created. An admin must approve it before you can use CattleVision AI.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16, color: Colors.white70),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: _refreshApprovalStatus,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Check Approval Status'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_user.approved) {
+      return _pendingApprovalPage();
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('CattleVision AI - ${_user.role.toUpperCase()}'),
+        actions: [
+          if (_isAdmin)
+            IconButton(
+              icon: const Icon(Icons.verified_user_outlined),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AdminUserApprovalScreen(),
+                  ),
+                );
+              },
+              tooltip: 'User Approval',
+            ),
           IconButton(
             icon: const Icon(Icons.lock_reset),
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ChangePasswordScreen(user: widget.user),
+                  builder: (_) => ChangePasswordScreen(user: _user),
                 ),
               );
             },
             tooltip: 'Change Password',
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _logout,
+            tooltip: 'Logout',
           ),
         ],
       ),
@@ -115,7 +238,11 @@ class _MainShellScreenState extends State<MainShellScreen> {
         selectedIndex: selectedIndex,
         backgroundColor: const Color(0xFF111C2E),
         indicatorColor: Colors.cyanAccent.withOpacity(0.25),
-        onDestinationSelected: (index) => setState(() => selectedIndex = index),
+        onDestinationSelected: (index) {
+          setState(() {
+            selectedIndex = index;
+          });
+        },
         destinations: destinations,
       ),
     );
